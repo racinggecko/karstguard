@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0B1D2E">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>KarstGuard PA - Day 0 Baseline</title>
+<style>
+  :root{
+    --navy:#0B1D2E; --navy2:#12304a; --karst:#0E7C86; --karst-lt:#2ED9C3;
+    --marker:#E08A1E; --ink:#16202B; --muted:#6B7C8C; --line:#E3EAF0; --bg:#F4F7FA;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--navy)}
+  body{font:16px/1.45 -apple-system,"Segoe UI",Roboto,system-ui,sans-serif;color:var(--ink)}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+  header{background:var(--navy);color:#fff;padding:14px 18px 12px;flex:0 0 auto;
+    position:relative;padding-left:64px}
+  #mark{position:absolute;left:16px;top:14px;width:38px;height:38px;border-radius:9px;object-fit:cover}
+  header .eyebrow{font-size:10px;letter-spacing:1.6px;color:#8FB8C4;text-transform:uppercase}
+  header h1{margin:2px 0 0;font-size:19px;font-weight:700}
+  header p{margin:3px 0 0;font-size:11.5px;color:#A9C0CE}
+  .badge{position:absolute;top:16px;right:16px;background:#0f3f4a;color:var(--karst-lt);
+    font-size:9.5px;letter-spacing:1.1px;padding:5px 9px;border-radius:20px;text-transform:uppercase}
+  main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .pad{padding:16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;
+    margin-bottom:10px;display:flex;align-items:center;gap:14px}
+  .tile .dot{width:34px;height:34px;border-radius:9px;background:#E6F4F4;color:var(--karst);
+    display:flex;align-items:center;justify-content:center;font-weight:700;flex:0 0 auto}
+  .tile h3{margin:0;font-size:15.5px}
+  .tile p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+  .btn{display:block;width:100%;border:0;border-radius:11px;padding:15px;font-size:15px;
+    font-weight:700;background:var(--navy);color:#fff;letter-spacing:.3px}
+  .btn[disabled]{background:#AFC0CD}
+  .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+  .stats{display:flex;gap:8px;margin-top:12px}
+  .stat{flex:1;background:#F7FAFC;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:17px}
+  .stat span{font-size:8.5px;letter-spacing:.9px;color:var(--muted);text-transform:uppercase}
+  /* ---- camera ---- */
+  #cam{position:relative;flex:1 1 auto;background:#000;overflow:hidden}
+  #video,#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  #bracket{position:absolute;left:8%;right:8%;top:20%;bottom:30%;border:2px solid rgba(255,255,255,.45);
+    border-radius:6px;transition:border-color .18s}
+  #bracket.ok{border-color:var(--karst-lt);border-width:3px}
+  #banner{position:absolute;left:12px;right:12px;top:12px;padding:12px 14px;border-radius:11px;
+    font-size:13px;font-weight:600;display:none}
+  #banner.bad{display:block;background:rgba(178,40,40,.94);color:#fff}
+  #banner.good{display:block;background:rgba(16,110,80,.94);color:#fff}
+  #banner small{display:block;font-weight:400;opacity:.9;margin-top:3px;font-size:11.5px}
+  #readout{position:absolute;left:0;right:0;bottom:0;background:rgba(6,18,30,.82);padding:12px 14px 16px}
+  #readout .row{display:flex;gap:6px;margin-bottom:10px}
+  #readout .r{flex:1;text-align:center}
+  #readout .r b{display:block;color:#fff;font-size:15px}
+  #readout .r.ok b{color:var(--karst-lt)} #readout .r.no b{color:var(--marker)}
+  #readout .r span{font-size:8px;letter-spacing:.9px;color:#8FA8B8;text-transform:uppercase}
+  #quality{color:#fff;font-size:26px;font-weight:700;line-height:1}
+  #quality small{font-size:9px;letter-spacing:1.1px;color:#8FA8B8;display:block;font-weight:400}
+  .cmp{position:relative;border-radius:10px;overflow:hidden;background:#222;aspect-ratio:4/3}
+  .cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cmp .top{clip-path:inset(0 50% 0 0)}
+  .cmp .tag{position:absolute;top:8px;font-size:9px;letter-spacing:1px;background:rgba(6,18,30,.8);
+    color:#fff;padding:4px 8px;border-radius:20px}
+  .cmp input{position:absolute;bottom:8px;left:8px;right:8px;width:calc(100% - 16px)}
+  .delta{position:absolute;right:10px;bottom:34px;background:var(--marker);color:#fff;
+    padding:8px 12px;border-radius:9px;font-weight:700;font-size:19px}
+  .delta small{display:block;font-size:8px;font-weight:400;letter-spacing:.8px}
+  .chk{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .chk:last-child{border:0}
+  .chk i{width:20px;height:20px;border-radius:6px;background:var(--karst);color:#fff;font-style:normal;
+    font-size:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .chk em{font-style:normal;font-size:11px;color:var(--muted);display:block}
+  .note{font-size:11.5px;color:var(--muted);margin:10px 0 0}
+  nav{flex:0 0 auto;display:flex;background:#fff;border-top:1px solid var(--line)}
+  nav button{flex:1;border:0;background:none;padding:9px 4px 12px;font-size:9px;letter-spacing:.5px;
+    color:var(--muted);text-transform:uppercase}
+  nav button.on{color:var(--karst);font-weight:700;box-shadow:inset 0 2px 0 var(--karst)}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <img id="mark" src="icon-192.png" alt="">
+    <div class="eyebrow">Evidence before emergency</div>
+    <h1 id="ttl">KarstGuard PA</h1>
+    <p id="sub">Measure change, not complaints</p>
+    <div class="badge" id="badge">Field ready</div>
+  </header>
+
+  <!-- ============ HOME ============ -->
+  <main id="s-home"><div class="pad">
+    <div class="tile" onclick="go('area')"><div class="dot">1</div>
+      <div><h3>My area reports</h3><p>Nearby concerns and local context</p></div></div>
+    <div class="tile" onclick="go('scan')"><div class="dot">2</div>
+      <div><h3>Guided road scan</h3><p>Capture the same feature, repeatably</p></div></div>
+    <div class="tile" onclick="go('vision')"><div class="dot">3</div>
+      <div><h3>Vision analysis</h3><p>Calibrate, compare, validate change</p></div></div>
+    <div class="tile" onclick="go('packet')"><div class="dot">4</div>
+      <div><h3>Evidence packet</h3><p>A standardized report for review</p></div></div>
+    <div class="card" style="background:var(--navy);border:0;color:#fff">
+      <div style="font-size:9px;letter-spacing:1.4px;color:var(--marker)">LOCAL CONTEXT</div>
+      <h3 style="margin:6px 0 4px;font-size:17px">Roadway monitoring workflow</h3>
+      <p style="margin:0;font-size:12px;color:#A9C0CE">Nearby reports, then a repeat scan, then evidence
+        for professional follow-up.</p>
+      <div class="stats">
+        <div class="stat" style="background:#12304a;border-color:#1d4260">
+          <b style="color:#fff">3</b><span>Nearby</span></div>
+        <div class="stat" style="background:#12304a;border-color:#1d4260">
+          <b style="color:#fff">2.1</b><span>In rainfall</span></div>
+        <div class="stat" style="background:#12304a;border-color:#1d4260">
+          <b style="color:#fff" id="homeQ">--</b><span>Image quality</span></div>
+      </div>
+    </div>
+  </div></main>
+
+  <!-- ============ MY AREA ============ -->
+  <main id="s-area" class="hide"><div class="pad">
+    <div class="card" style="padding:0;overflow:hidden">
+      <svg viewBox="0 0 320 170" style="display:block;width:100%;background:#EAF2F6">
+        <path d="M0 118 L320 74" stroke="#C9D6DE" stroke-width="9" fill="none"/>
+        <path d="M52 0 L104 170" stroke="#C9D6DE" stroke-width="7" fill="none"/>
+        <path d="M0 44 L320 128" stroke="#BFE3EE" stroke-width="13" fill="none" opacity=".85"/>
+        <g opacity=".55">
+          <polygon points="150,60 168,70 168,90 150,100 132,90 132,70" fill="#E08A1E" stroke="#0E7C86"/>
+          <polygon points="186,78 204,88 204,108 186,118 168,108 168,88" fill="#2ED9C3" stroke="#0E7C86"/>
+          <polygon points="114,78 132,88 132,108 114,118 96,108 96,88" fill="#2ED9C3" stroke="#0E7C86" opacity=".6"/>
+        </g>
+        <text x="150" y="86" font-size="11" font-weight="700" fill="#0B1D2E">2</text>
+      </svg>
+    </div>
+    <p class="note" style="margin-top:0">Locations are generalized to hexagonal cells of about
+      0.1&nbsp;km². No distance or bearing is shown, so nothing here can be intersected back to an address.</p>
+    <div class="card">
+      <div class="chk"><i>✓</i><div>Route 191 shoulder depression<em>2 reports in this area · review</em></div></div>
+      <div class="chk"><i>✓</i><div>Parkway pavement crack cluster<em>1 report and recent rainfall · watch</em></div></div>
+      <div class="chk"><i>✓</i><div>Drainage swale near culvert<em>Context only, no change confirmed</em></div></div>
+    </div>
+    <button class="btn" onclick="go('scan')">Start guided road scan</button>
+  </div></main>
+
+  <!-- ============ GUIDED SCAN (live camera) ============ -->
+  <main id="s-scan" class="hide" style="display:flex;flex-direction:column;padding:0">
+    <div id="cam">
+      <video id="video" playsinline muted autoplay></video>
+      <div id="bracket"></div>
+      <div id="banner"></div>
+      <div id="readout">
+        <div id="quality">--<small>Alignment quality</small></div>
+        <div class="row" style="margin-top:10px">
+          <div class="r" id="rAng"><b>--</b><span>Camera angle</span></div>
+          <div class="r" id="rSharp"><b>--</b><span>Sharpness</span></div>
+          <div class="r" id="rMark"><b>--</b><span>Marker</span></div>
+        </div>
+        <button class="btn" id="shutter" disabled onclick="capture()">Capture repeat scan</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ VISION ANALYSIS ============ -->
+  <main id="s-vision" class="hide"><div class="pad">
+    <div class="card">
+      <div class="chk"><i>✓</i><div>Marker calibration<em id="v1">Reference scale established</em></div></div>
+      <div class="chk"><i>✓</i><div>Perspective correction<em id="v2">Homography normalized</em></div></div>
+      <div class="chk"><i>✓</i><div>Edge comparison<em id="v3">Visible widening segmented</em></div></div>
+      <div class="chk"><i>✓</i><div>Quality gate<em id="v4">Image quality validated</em></div></div>
+    </div>
+    <div class="card">
+      <strong style="font-size:14px">Baseline ↔ current</strong>
+      <p class="note" style="margin:2px 0 10px">Drag to inspect the calibrated overlay</p>
+      <div class="cmp">
+        <img id="imgBase"><img id="imgCur" class="top">
+        <span class="tag" style="left:8px">BASELINE</span>
+        <span class="tag" style="right:8px">CURRENT</span>
+        <div class="delta" id="delta">--<small>VISIBLE CHANGE</small></div>
+        <input type="range" min="0" max="100" value="50" oninput="wipe(this.value)">
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="mQ">--</b><span>Image quality</span></div>
+        <div class="stat"><b id="mCal">--</b><span>Calibration</span></div>
+        <div class="stat"><b id="mSt">--</b><span>Scan status</span></div>
+      </div>
+    </div>
+    <button class="btn" onclick="go('packet')">Build evidence packet</button>
+  </div></main>
+
+  <!-- ============ EVIDENCE PACKET ============ -->
+  <main id="s-packet" class="hide"><div class="pad">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <strong style="font-size:15px">Route 191 shoulder crack</strong>
+        <span style="font-size:10px;color:var(--marker);font-weight:700">REVIEW</span></div>
+      <p class="note" style="margin-top:2px">Packet <span id="ref">KG-PA-0000-R00</span></p>
+      <div class="stats">
+        <div class="stat"><b id="pDelta">--</b><span>Measured</span></div>
+        <div class="stat"><b id="pQ">--</b><span>Image quality</span></div>
+        <div class="stat"><b id="pScore">72</b><span>Priority /100</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chk"><i>+34</i><div>Physical change<em id="pc">Measured widening beyond survey noise</em></div></div>
+      <div class="chk"><i>+16</i><div>Geology<em>Mapped carbonate bedrock</em></div></div>
+      <div class="chk"><i>+12</i><div>Rainfall<em>2.1 in over 72 hours</em></div></div>
+      <div class="chk"><i>+10</i><div>Corroboration<em>2 reports in this area</em></div></div>
+    </div>
+    <div class="card" style="background:#FFF8EC;border-color:#F0DDBA">
+      <strong style="font-size:12px;color:var(--marker)">RECOMMENDED NEXT STEP</strong>
+      <p style="margin:6px 0 0;font-size:12.5px">Share this record with a municipal reviewer or qualified
+        professional for follow-up inspection. KarstGuard does not identify or confirm sinkholes.</p>
+    </div>
+    <button class="btn" onclick="seal()">Seal evidence packet</button>
+  </div></main>
+
+  <nav>
+    <button id="n-home"   class="on" onclick="go('home')">Home</button>
+    <button id="n-area"   onclick="go('area')">My area</button>
+    <button id="n-scan"   onclick="go('scan')">Capture</button>
+    <button id="n-vision" onclick="go('vision')">Analysis</button>
+    <button id="n-packet" onclick="go('packet')">Report</button>
+  </nav>
+</div>
+
+<script>
+/* ===================================================================
+   KarstGuard PA - DAY 0 filming build.
+
+   The live capture gate is real: camera, marker, angle and sharpness are
+   evaluated from the phone. This build is intentionally more forgiving
+   for the outdoor video shoot and saves a baseline image for the Day 21
+   demonstration build when both files are served from the same origin.
+   =================================================================== */
+
+const MARKER_MM = 50.0;      // must match marker_side_mm in the service config
+const MIN_SHARP = 35;        // filming build: forgiving enough for a quick handheld capture
+const MAX_ANGLE = 15.0;      // filming build: easy pass; deliberate tilt still triggers rejection
+const W = 192, H = 256;      // analysis resolution - small enough for 30 fps
+
+let screen = 'home', stream = null, gate = null, raf = null;
+let tiltAngle = null, motionHandler = null;
+const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+const cx = cv.getContext('2d', {willReadFrequently:true});
+const $ = id => document.getElementById(id);
+
+const TITLES = {
+  home:  ['KarstGuard PA','Measure change, not complaints','Field ready'],
+  area:  ['My area','Nearby concerns and local context','Early warning'],
+  scan:  ['Guided road scan','Capture the Day 0 baseline','Baseline'],
+  vision:['Vision analysis','Calibrated road crack comparison','On device'],
+  packet:['Evidence packet','Ready for reviewer follow-up','Sealed']
+};
+
+function go(s){
+  screen = s;
+  ['home','area','scan','vision','packet'].forEach(k=>{
+    $('s-'+k).classList.toggle('hide', k!==s);
+    $('n-'+k).classList.toggle('on', k===s);
+  });
+  const t = TITLES[s]; $('ttl').textContent=t[0]; $('sub').textContent=t[1]; $('badge').textContent=t[2];
+  s==='scan' ? startCamera() : stopCamera();
+}
+
+/* ---------- camera ---------- */
+async function startCamera(){
+  if (stream) return;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}, audio:false});
+    $('video').srcObject = stream;
+    await $('video').play();
+    startTiltSensor();
+    loop();
+  }catch(e){
+    banner('bad','Camera unavailable','Allow camera access, and open this over HTTPS.');
+  }
+}
+function stopCamera(){
+  if (raf) cancelAnimationFrame(raf), raf=null;
+  if (stream) stream.getTracks().forEach(t=>t.stop()), stream=null;
+  // Keep the motion listener alive between screens once permission is granted;
+  // it avoids repeated prompts and gives an immediate stable angle on re-entry.
+}
+
+/* ---------- image analysis ---------- */
+// Draw the camera into a target canvas WITHOUT stretching it.
+// This mirrors CSS object-fit: cover: crop the source, then scale uniformly.
+function drawVideoCover(ctx, video, dw, dh){
+  const sw = video.videoWidth, sh = video.videoHeight;
+  if (!sw || !sh) return false;
+  const srcAR = sw / sh, dstAR = dw / dh;
+  let sx=0, sy=0, sWidth=sw, sHeight=sh;
+  if (srcAR > dstAR){
+    // Source is wider than target: crop left/right.
+    sWidth = sh * dstAR;
+    sx = (sw - sWidth) / 2;
+  } else {
+    // Source is taller than target: crop top/bottom.
+    sHeight = sw / dstAR;
+    sy = (sh - sHeight) / 2;
+  }
+  ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, dw, dh);
+  return true;
+}
+
+function grab(){
+  drawVideoCover(cx, $('video'), W, H);
+  const d = cx.getImageData(0,0,W,H).data, g = new Float32Array(W*H);
+  for (let i=0,p=0;i<d.length;i+=4,p++) g[p] = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+  return g;
+}
+
+// Variance of the Laplacian. Few sharp edges means a soft image.
+function sharpness(g){
+  let s=0, s2=0, n=0;
+  for (let y=1;y<H-1;y++) for (let x=1;x<W-1;x++){
+    const i=y*W+x;
+    const L = 4*g[i] - g[i-1] - g[i+1] - g[i-W] - g[i+W];
+    s+=L; s2+=L*L; n++;
+  }
+  return s2/n - (s/n)**2;
+}
+
+// Largest near-square dark region = the printed marker. Its width in pixels
+// against a known 50 mm gives millimeters per pixel.
+function findMarker(g){
+  let mean=0; for (let i=0;i<g.length;i++) mean+=g[i]; mean/=g.length;
+  const thr = mean*0.55;
+  const seen = new Uint8Array(W*H);
+  let best = null;
+  for (let y=2;y<H-2;y+=2) for (let x=2;x<W-2;x+=2){
+    const i=y*W+x;
+    if (g[i]>thr || seen[i]) continue;
+    // iterative flood fill; recursion would blow the stack on a dark frame
+    let minX=x,maxX=x,minY=y,maxY=y,count=0;
+    const stack=[i];
+    seen[i]=1;
+    while (stack.length){
+      const p=stack.pop(), py=(p/W)|0, px=p-py*W;
+      count++;
+      if(px<minX)minX=px; if(px>maxX)maxX=px;
+      if(py<minY)minY=py; if(py>maxY)maxY=py;
+      if(count>W*H) break;
+      const nb=[p-1,p+1,p-W,p+W];
+      for(const q of nb){
+        if(q<0||q>=W*H||seen[q]||g[q]>thr) continue;
+        seen[q]=1; stack.push(q);
+      }
+    }
+    const w=maxX-minX+1, h=maxY-minY+1;
+    if (w<14||h<14) continue;
+    const ratio = Math.min(w,h)/Math.max(w,h);
+    const fill  = count/(w*h);
+    if (ratio<0.50 || fill<0.35) continue;          // filming build: slightly more tolerant marker lock
+    if (!best || count>best.count) best={minX,maxX,minY,maxY,w,h,count,ratio};
+  }
+  return best;
+}
+
+// Fallback only: estimate perspective from the marker's bounding box.
+// Ignore a couple of pixels of segmentation error; otherwise a 1 px mismatch
+// can turn into a double-digit angle at this low analysis resolution.
+function markerAngleOf(m){
+  const longSide = Math.max(m.w, m.h);
+  const shortSide = Math.min(m.w, m.h);
+  const correctedShort = Math.min(longSide, shortSide + 2);
+  const ratio = correctedShort / longSide;
+  return Math.acos(Math.min(1, Math.max(0, ratio))) * 180 / Math.PI;
+}
+
+// Use gravity to measure how far the PHONE is tilted away from flat.
+// 0 degrees = phone parallel to the ground; 90 degrees = phone vertical.
+async function startTiltSensor(){
+  if (motionHandler) return;
+  try{
+    if (typeof DeviceMotionEvent !== 'undefined' &&
+        typeof DeviceMotionEvent.requestPermission === 'function'){
+      const p = await DeviceMotionEvent.requestPermission();
+      if (p !== 'granted') return;
+    }
+  }catch(e){ return; }
+
+  motionHandler = e => {
+    const a = e.accelerationIncludingGravity;
+    if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.y) || !Number.isFinite(a.z)) return;
+    const mag = Math.hypot(a.x, a.y, a.z);
+    if (mag < 2) return;
+    const raw = Math.atan2(Math.hypot(a.x, a.y), Math.abs(a.z)) * 180 / Math.PI;
+    // Low-pass filter so hand jitter does not make the number jump around.
+    tiltAngle = (tiltAngle == null) ? raw : (0.85 * tiltAngle + 0.15 * raw);
+  };
+  window.addEventListener('devicemotion', motionHandler, {passive:true});
+}
+
+// Median darkest contiguous run through the middle band = crack width.
+function crackWidthPx(g){
+  const runs=[];
+  for (let y=Math.floor(H*0.30); y<H*0.72; y+=2){
+    let lo=255, best=0, run=0;
+    for (let x=Math.floor(W*0.15); x<W*0.85; x++) if (g[y*W+x]<lo) lo=g[y*W+x];
+    const thr = lo + 26;
+    for (let x=Math.floor(W*0.15); x<W*0.85; x++){
+      if (g[y*W+x] < thr){ run++; if(run>best) best=run; } else run=0;
+    }
+    if (best>0) runs.push(best);
+  }
+  if (!runs.length) return 0;
+  runs.sort((a,b)=>a-b);
+  return runs[runs.length>>1];
+}
+
+function banner(kind, title, sub){
+  const b=$('banner');
+  if(!kind){ b.className=''; b.style.display='none'; return; }
+  b.className=kind; b.innerHTML = title + (sub?'<small>'+sub+'</small>':'');
+}
+
+/* ---------- live loop ---------- */
+function loop(){
+  raf = requestAnimationFrame(loop);
+  if (screen!=='scan' || $('video').readyState<2) return;
+
+  const g = grab();
+  const sharp = sharpness(g);
+  const mk = findMarker(g);
+  const markerAng = mk ? markerAngleOf(mk) : 90;
+  // Prefer the phone's gravity-based tilt. Fall back to marker geometry if
+  // motion sensors are unavailable.
+  const ang = (tiltAngle != null) ? tiltAngle : markerAng;
+
+  const okSharp = sharp >= MIN_SHARP;
+  const okMark  = !!mk;
+  const okAng   = okMark && ang <= MAX_ANGLE;
+
+  // Weakest component, not the average: one bad check ruins the measurement
+  // and three good ones cannot make up for it.
+  const q = Math.round(100 * Math.min(
+      Math.min(1, sharp/(MIN_SHARP*2)),
+      okMark ? Math.max(0, 1-ang/(MAX_ANGLE*2.5)) : 0,
+      okMark ? Math.min(1, mk.w/(W*0.18)) : 0));
+
+  $('quality').innerHTML = (okMark? q : '--') + (okMark?'%':'') + '<small>Alignment quality</small>';
+  set('rAng',  okMark ? ang.toFixed(1)+'°' : '--', okAng);
+  set('rSharp',okSharp ? 'Good' : 'Soft', okSharp);
+  set('rMark', okMark ? 'Lock' : 'Search', okMark);
+  $('bracket').classList.toggle('ok', okSharp && okAng && okMark);
+
+  if (!okMark)        banner('bad','Marker not found','Place the printed marker flat beside the crack.');
+  else if (!okAng)    banner('bad','Image rejected','Angle '+ang.toFixed(1)+'° — outside capture tolerance.');
+  else if (!okSharp)  banner('bad','Hold steady','The image is not sharp enough to measure.');
+  else                banner('good','Rescan accepted','Angle, framing, lighting and marker checks passed.');
+
+  gate = (okSharp&&okAng&&okMark) ? {q, ang, sharp, mmPerPx: MARKER_MM/mk.w, g} : null;
+  $('shutter').disabled = !gate;
+}
+function set(id, txt, ok){
+  const e=$(id); e.querySelector('b').textContent=txt;
+  e.className='r '+(ok?'ok':'no');
+}
+
+/* ---------- capture ---------- */
+function snapshot(){
+  const c=document.createElement('canvas'), v=$('video');
+  c.width=640; c.height=480;
+  drawVideoCover(c.getContext('2d'), v, c.width, c.height);
+  return c.toDataURL('image/jpeg',0.85);
+}
+
+function capture(){
+  if (!gate) return;
+  const widthMm = crackWidthPx(gate.g) * gate.mmPerPx;
+  const shot = snapshot();
+
+  // Filming build: every capture is a fresh Day 0 baseline. This avoids an
+  // old localStorage entry turning a clean take into an accidental follow-up.
+  const base = {widthMm, img:shot, at:Date.now(), q:gate.q};
+  localStorage.setItem('kg_baseline', JSON.stringify(base));
+  localStorage.setItem('kg_demo_baseline', JSON.stringify(base));
+
+  banner('good','Baseline saved','Day 0 reference captured. Ready for the follow-up demo.');
+  $('shutter').disabled = true;
+  setTimeout(()=>{ if (screen==='scan') $('shutter').disabled = !gate; }, 1200);
+}
+function show(baseMm, curMm, q, mmPerPx, imgB, imgC, days){
+  const d = curMm - baseMm;
+  $('imgBase').src = imgB; $('imgCur').src = imgC;
+  $('delta').innerHTML = (d>=0?'+':'') + d.toFixed(1) + ' mm<small>VISIBLE CHANGE · '+days+' DAYS</small>';
+  $('mQ').textContent = q+'%';
+  $('mCal').textContent = mmPerPx.toFixed(2)+' mm';
+  $('mSt').textContent = 'Accepted';
+  $('v1').textContent = 'Marker 50 mm → '+mmPerPx.toFixed(3)+' mm per pixel';
+  $('v3').textContent = 'Baseline '+baseMm.toFixed(1)+' mm → current '+curMm.toFixed(1)+' mm';
+  $('pDelta').textContent = (d>=0?'+':'')+d.toFixed(1)+' mm';
+  $('pQ').textContent = q+'%'; $('homeQ').textContent = q+'%';
+  $('pc').textContent = 'Measured widening of '+d.toFixed(1)+' mm over '+days+' days';
+  const n = new Date();
+  $('ref').textContent = 'KG-PA-'+String(n.getMonth()+1).padStart(2,'0')
+    + String(n.getDate()).padStart(2,'0')+'-R'+String(n.getMinutes()).padStart(2,'0');
+  go('vision');
+}
+
+function wipe(v){ $('imgCur').style.clipPath = 'inset(0 '+(100-v)+'% 0 0)'; }
+function seal(){ $('badge').textContent='Sealed'; banner(null); alert('Evidence packet sealed.'); }
+
+/* Reset for a clean take: triple-tap the header. */
+let taps=0, tapT=0;
+document.querySelector('header').addEventListener('click',()=>{
+  const now=Date.now(); taps = (now-tapT<600)?taps+1:1; tapT=now;
+  if(taps>=3){ localStorage.removeItem('kg_baseline'); localStorage.removeItem('kg_demo_baseline'); taps=0;
+    $('badge').textContent='Reset'; setTimeout(()=>$('badge').textContent='Field ready',1200); }
+});
+
+go('home');
+</script>
+</body>
+</html>
